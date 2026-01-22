@@ -2,6 +2,15 @@
 Imports System.Data
 Public Class Form2
     Dim conn As New SqlConnection("Data Source=DESKTOP-A7LUGNG;Initial Catalog=SalesDB;Integrated Security=True")
+
+
+    Private Sub Add1(ctrl As Control, msg As String)
+        ToolTip1.SetToolTip(ctrl, msg)
+        ToolTip1.AutoPopDelay = 10000
+        ToolTip1.InitialDelay = 500
+        ToolTip1.ReshowDelay = 200
+    End Sub
+
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
 
 
@@ -30,18 +39,82 @@ Public Class Form2
 
     End Sub
 
-    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
-        If Not SalesTools2.IsValidProductRow(TextBox2.Tag, numQty.Value) Then Exit Sub
+    Private Sub btnAdd_Click(sender As Object, e As EventArgs) Handles btnAdd.Click
 
-        Dim pid = TextBox2.Tag
-        Dim price = Convert.ToDecimal(numQty.Tag)
-        Dim qty = numQty.Value
-        Dim subtotal = qty * price
 
-        dgvInvoice.Rows.Add(pid, TextBox2.Text, price, qty, subtotal)
 
+
+        Dim productId As Integer
+        Dim productName As String
+        Dim productPrice As Decimal
+        Dim qty As Integer
+
+        ' الحالة الأولى: البحث بالاسم في TextBox2
+        If Not String.IsNullOrWhiteSpace(TextBox2.Text) Then
+            Using conn As New SqlConnection("Data Source=DESKTOP-A7LUGNG;Initial Catalog=SalesDB;Integrated Security=True")
+                conn.Open()
+                Dim cmd As New SqlCommand("SELECT TOP 1 * FROM Products WHERE ProductName LIKE @name", conn)
+                cmd.Parameters.AddWithValue("@name", "%" & TextBox2.Text & "%")
+                Using reader = cmd.ExecuteReader()
+                    If reader.Read() Then
+                        productId = Convert.ToInt32(reader("ProductID"))
+                        productName = reader("ProductName").ToString()
+                        productPrice = Convert.ToDecimal(reader("Price"))
+                    Else
+                        MessageBox.Show("⚠ المنتج غير موجود بالبحث النصي.")
+                        Exit Sub
+                    End If
+                End Using
+            End Using
+
+            ' الكمية باستخدام NumericUpDown
+            qty = Convert.ToInt32(numQty.Value)
+            If qty <= 0 Then
+                MessageBox.Show("⚠ أدخل كمية صحيحة أكبر من صفر.", "خطأ", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Exit Sub
+            End If
+
+        Else
+            ' الحالة الثانية: اختيار المنتج من DataGridView1
+            If DataGridView1.CurrentRow Is Nothing Then
+                MessageBox.Show("⚠ يرجى اختيار منتج من القائمة أو كتابة اسمه.", "تنبيه", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Exit Sub
+            End If
+
+            productId = Convert.ToInt32(DataGridView1.CurrentRow.Cells("رقم المنتج").Value)
+            productName = DataGridView1.CurrentRow.Cells("اسم المنتج").Value.ToString()
+            productPrice = Convert.ToDecimal(DataGridView1.CurrentRow.Cells("السعر").Value)
+
+            ' الكمية باستخدام InputBox
+            Dim qtyInput As String = InputBox("أدخل الكمية للمنتج: " & productName, "إدخال الكمية")
+            If Not Integer.TryParse(qtyInput, qty) OrElse qty <= 0 Then
+                MessageBox.Show("⚠ الكمية غير صحيحة.", "خطأ", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Exit Sub
+            End If
+        End If
+
+        ' حساب الإجمالي الجزئي
+        Dim subtotal As Decimal = qty * productPrice
+
+        ' إضافة إلى الفاتورة
+        dgvInvoice.Rows.Add(productId, productName, productPrice, qty, subtotal)
+
+        ' تحديث الإجمالي الكلي مباشرة
+        Dim total As Decimal = 0
+        For Each row As DataGridViewRow In dgvInvoice.Rows
+            If row.IsNewRow Then Continue For
+            total += Convert.ToDecimal(row.Cells("SubTotal").Value)
+        Next
+        Label3.Text = "الإجمالي الكلي: " & FormatCurrency(total)
+
+        MessageBox.Show("✅ تمت إضافة المنتج '" & productName & "' بالكمية " & qty & " إلى الفاتورة.")
+
+        TextBox2.Text = ""
 
     End Sub
+
+
+
 
     Private Sub NumericUpDown1_ValueChanged(sender As Object, e As EventArgs) Handles numQty.ValueChanged
 
@@ -173,8 +246,27 @@ Public Class Form2
     Private Sub Form2_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Label1.Text = DateString
         Label2.Text = TimeString
+        Add1(btnAdd, "إضغط على هذا الزر لإضافة المنتج المكتوب
+في مربع النص الخاص بإسم
+المنتج إلى الفاتورة")
+        Add1(Button2, "إضغط هذا الزر لحفظ التغييرات 
+في الفاتورة بعد تغييرها 
+مباشرة في شاشة العرض و لتحديث بيانات العرض")
 
-
+        Add1(Button7, "إضغط هذا الزر لحفظ الفاتورة 
+و إضافتها إلى قاعدة البيانات ")
+        Add1(Button6, "   إضغط على هذا الزر للبحث عن 
+المنتج المكتوب في مربع النص الخاص 
+بإسم المنتج للتحقق من
+و جوده أو عدمه و بيانات المنتج")
+        Add1(Button3, " إضغط هذا الزر لحذف المنتج المحدد من الفاتورة")
+        Add1(Button4, " إضغط هذا الزر لإلغاء الفاتورة بالكامل")
+        Add1(Button5, "الضغط على هذا الزر يقود لإعدادات 
+المنظومة بالكامل و هو مخصص
+للمسؤل حيث يوجد كلمة مرور")
+        Add1(numQty, "لإختار الكمية المطلوبة")
+        Add1(TextBox2, "لإذخال إسم المنتج المراد إضافته
+إلى الفاتورة أو البحث عنه")
 
         If dgvInvoice.Columns.Count = 0 Then
             dgvInvoice.Columns.Add("ProductID", "رقم المنتج")
@@ -190,11 +282,35 @@ Public Class Form2
         Dim da As New SqlDataAdapter(query, conn)
         da.Fill(dt)
         DataGridView1.DataSource = dt
+        dgvInvoice.AlternatingRowsDefaultCellStyle.BackColor = Color.LightGray
+        DataGridView1.AlternatingRowsDefaultCellStyle.BackColor = Color.LightGray
+
+        dgvInvoice.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgvInvoice.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
+        dgvInvoice.Font = New Font("Tahoma", 12, FontStyle.Bold)
+        dgvInvoice.ColumnHeadersDefaultCellStyle.Font = New Font("Tahoma", 11, FontStyle.Bold)
+
+        DataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        DataGridView1.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
+        DataGridView1.Font = New Font("Tahoma", 12, FontStyle.Bold)
+        DataGridView1.ColumnHeadersDefaultCellStyle.Font = New Font("Tahoma", 11, FontStyle.Bold)
+
+
 
 
     End Sub
 
     Private Sub dgvInvoice_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvInvoice.CellContentClick
+        dgvInvoice.Font = New Font("Tahoma", 10, FontStyle.Bold)
+
+
+
+
+
+
+
+
+
 
     End Sub
 
@@ -239,13 +355,16 @@ Public Class Form2
 
 
     Private Sub dgvInvoice_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) Handles dgvInvoice.CellValueChanged
+
+
+
         ' التحقق من أن الصف صالح وليس صف جديد
         If e.RowIndex < 0 OrElse dgvInvoice.Rows(e.RowIndex).IsNewRow Then Exit Sub
 
-        ' التحديث فقط عند تعديل عمود "Quantity"
-        If dgvInvoice.Columns(e.ColumnIndex).Name = "Quantity" Then
-            Dim row = dgvInvoice.Rows(e.RowIndex)
+        Dim row = dgvInvoice.Rows(e.RowIndex)
 
+        ' إذا تم تعديل عمود الكمية أو السعر
+        If dgvInvoice.Columns(e.ColumnIndex).Name = "Quantity" OrElse dgvInvoice.Columns(e.ColumnIndex).Name = "Price" Then
             Try
                 Dim qtyText = row.Cells("Quantity").Value?.ToString()
                 Dim priceText = row.Cells("Price").Value?.ToString()
@@ -261,13 +380,27 @@ Public Class Form2
                     Exit Sub
                 End If
 
-                ' تحديث الإجمالي الجزئي
+                ' تحديث الإجمالي الجزئي للصف
                 row.Cells("SubTotal").Value = qty * price
+
+                ' تحديث الإجمالي الكلي لكل الفاتورة
+                Dim total As Decimal = 0
+                For Each r As DataGridViewRow In dgvInvoice.Rows
+                    If r.IsNewRow Then Continue For
+                    If r.Cells("SubTotal").Value IsNot Nothing Then
+                        total += Convert.ToDecimal(r.Cells("SubTotal").Value)
+                    End If
+                Next
+                Label3.Text = "الإجمالي الكلي: " & FormatCurrency(total)
 
             Catch
                 MessageBox.Show("⚠ خطأ في صيغة الكمية أو السعر.", "تنبيه", MessageBoxButtons.OK, MessageBoxIcon.Warning)
             End Try
         End If
+        DataGridView1.Font = New Font("Tahoma", 10, FontStyle.Bold)
+
+
+
     End Sub
 
     Private Sub Button5_Click(sender As Object, e As EventArgs) Handles Button5.Click
@@ -275,6 +408,34 @@ Public Class Form2
         Me.Hide()
     End Sub
 
+    Private Sub DataGridView1_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles DataGridView1.CellContentClick
+        DataGridView1.Font = New Font("Tahoma", 10, FontStyle.Bold)
+    End Sub
+    Private Sub LoadStock()
 
 
+
+        Dim dt As New DataTable()
+        Dim cmd As New SqlCommand("SELECT * FROM Products", SalesTools2.conn)
+        Dim da As New SqlDataAdapter(cmd)
+        da.Fill(dt)
+
+        ' ربط البيانات
+        dgvInvoice.DataSource = dt
+        DataGridView1.DataSource = dt
+
+        ' مرونة الأعمدة والصفوف + تكبير الخط
+
+        ' تلوين الصفوف بالتبادل
+
+
+    End Sub
+
+    Private Sub Label1_Click(sender As Object, e As EventArgs) Handles Label1.Click
+
+    End Sub
+
+    Private Sub Label6_Click(sender As Object, e As EventArgs) Handles Label6.Click
+
+    End Sub
 End Class

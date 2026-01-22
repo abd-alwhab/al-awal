@@ -165,6 +165,9 @@ Public Class Form4
 
         MessageBox.Show("✏️ تم تعديل المنتج بالكامل بنجاح.")
         LoadStock()
+        DbHelper.LoadData("SELECT ProductID, ProductName, Price, StockQuantity FROM Products", dgvStock, Nothing)
+
+
     End Sub
 
     Private Sub TextBox2_TextChanged(sender As Object, e As EventArgs) Handles txtProductName.TextChanged
@@ -193,6 +196,10 @@ Public Class Form4
         Dim da As New SqlDataAdapter(cmd)
         da.Fill(dt)
         dgvStock.DataSource = dt
+        dgvStock.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgvStock.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
+        dgvStock.Font = New Font("Tahoma", 10, FontStyle.Bold)
+        dgvStock.AlternatingRowsDefaultCellStyle.BackColor = Color.LightGray
     End Sub
 
     Private Sub Form4_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -204,5 +211,10 @@ Public Class Form4
     Private Sub Button6_Click(sender As Object, e As EventArgs) Handles Button6.Click
         FormReview.Show()
         Me.Hide()
+    End Sub
+
+    Private Sub dgvStock_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvStock.CellContentClick
+        dgvStock.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgvStock.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells
     End Sub
 End Class
